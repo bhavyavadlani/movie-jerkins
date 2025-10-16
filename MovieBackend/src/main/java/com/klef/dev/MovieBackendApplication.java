@@ -1,0 +1,13 @@
+package com.klef.dev;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class MovieBackendApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(MovieBackendApplication.class, args);
+        System.out.println(" Movie Backend is Running...");
+    }
+}
