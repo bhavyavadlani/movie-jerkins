@@ -9,7 +9,7 @@ import com.klef.dev.model.Movie;
 import com.klef.dev.service.MovieService;
 
 @RestController
-@RequestMapping("/movie")
+@RequestMapping("/movieapi")
 @CrossOrigin("*")
 public class MovieController
 {

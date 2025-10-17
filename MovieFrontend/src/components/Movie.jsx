@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import config from "../config.js";
 
 export default function Movie() {
   const [formData, setFormData] = useState({
@@ -18,22 +17,31 @@ export default function Movie() {
   const [viewId, setViewId] = useState("");
   const [viewMovie, setViewMovie] = useState(null);
 
+  // Use port 2345 for your backend
+  const baseUrl = `${import.meta.env.VITE_API_URL}/movieapi`;
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setMessage("");
+    
     try {
       if (editMode) {
-        const response = await axios.put(`${config.url}/movie/update`, { id: editId, ...formData });
+        const response = await axios.put(`${baseUrl}/update`, { 
+          id: editId, 
+          ...formData 
+        });
         if (response.status === 200) {
           setMessage(response.data);
           resetForm();
           fetchMovies();
         }
       } else {
-        const response = await axios.post(`${config.url}/movie/add`, formData);
+        const response = await axios.post(`${baseUrl}/add`, formData);
         if (response.status === 200) {
           setMessage(response.data);
           resetForm();
@@ -42,6 +50,7 @@ export default function Movie() {
       }
     } catch (err) {
       setError("Failed to save movie");
+      console.error("Save error:", err);
     }
   };
 
@@ -49,21 +58,24 @@ export default function Movie() {
     setFormData({ title: "", genre: "", duration: "", director: "" });
     setEditMode(false);
     setEditId(null);
+    setError("");
+    setMessage("");
   };
 
   const fetchMovies = async () => {
     try {
-      const response = await axios.get(`${config.url}/movie/viewall`);
+      const response = await axios.get(`${baseUrl}/viewall`);
       setMovieList(response.data);
     } catch (err) {
       setError("Failed to fetch movies");
+      console.error("Fetch error:", err);
     }
   };
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this movie?")) {
       try {
-        const response = await axios.delete(`${config.url}/movie/delete/${id}`);
+        const response = await axios.delete(`${baseUrl}/delete/${id}`);
         setMessage(response.data);
         fetchMovies();
       } catch {
@@ -81,6 +93,8 @@ export default function Movie() {
     });
     setEditId(movie.id);
     setEditMode(true);
+    setError("");
+    setMessage("");
   };
 
   const handleViewById = async () => {
@@ -89,7 +103,7 @@ export default function Movie() {
       return;
     }
     try {
-      const response = await axios.get(`${config.url}/movie/viewbyid/${viewId}`);
+      const response = await axios.get(`${baseUrl}/viewbyid/${viewId}`);
       setViewMovie(response.data);
       setError("");
     } catch {
@@ -113,21 +127,52 @@ export default function Movie() {
         <form onSubmit={handleSubmit}>
           <div>
             <label>Title:</label>
-            <input type="text" id="title" value={formData.title} onChange={handleChange} required />
+            <input 
+              type="text" 
+              id="title" 
+              value={formData.title} 
+              onChange={handleChange} 
+              required 
+            />
           </div>
           <div>
             <label>Genre:</label>
-            <input type="text" id="genre" value={formData.genre} onChange={handleChange} required />
+            <input 
+              type="text" 
+              id="genre" 
+              value={formData.genre} 
+              onChange={handleChange} 
+              required 
+            />
           </div>
           <div>
             <label>Duration (min):</label>
-            <input type="number" id="duration" value={formData.duration} onChange={handleChange} required />
+            <input 
+              type="number" 
+              id="duration" 
+              value={formData.duration} 
+              onChange={handleChange} 
+              required 
+            />
           </div>
           <div>
             <label>Director:</label>
-            <input type="text" id="director" value={formData.director} onChange={handleChange} required />
+            <input 
+              type="text" 
+              id="director" 
+              value={formData.director} 
+              onChange={handleChange} 
+              required 
+            />
           </div>
-          <button type="submit">{editMode ? "Update Movie" : "Add Movie"}</button>
+          <button type="submit">
+            {editMode ? "Update Movie" : "Add Movie"}
+          </button>
+          {editMode && (
+            <button type="button" onClick={resetForm} style={{ marginLeft: "10px" }}>
+              Cancel
+            </button>
+          )}
         </form>
       </div>
 
