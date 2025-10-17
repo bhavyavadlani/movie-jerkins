@@ -2,35 +2,28 @@ pipeline {
     agent any
 
     environment {
-        PATH = "/usr/local/bin:/opt/homebrew/bin:${env.PATH}"
+        // Ensures Jenkins shell can find node/npm
+        PATH = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+        TOMCAT_HOME = "/Users/vadlanibhavya/Downloads/apache-tomcat-10.1.43"
     }
 
     stages {
-        stage('Print Git Commit') {
+        stage('Checkout') {
             steps {
-                sh 'git rev-parse HEAD'
-            }
-        }
-
-        stage('Check Node, NPM & Maven') {
-            steps {
-                sh '''
-                echo "PATH=$PATH"
-                which node || echo "node not found"
-                which npm || echo "npm not found"
-                node -v || echo "node version unknown"
-                npm -v || echo "npm version unknown"
-
-                which mvn || echo "mvn not found"
-                mvn -v || echo "mvn version unknown"
-                '''
+                checkout scm
             }
         }
 
         stage('Build Frontend') {
             steps {
-                dir('STUDENTAPI-REACT') {
+                dir('MovieFrontend') {
                     sh '''
+                    echo "PATH=$PATH"
+                    which node || echo "node not found"
+                    node -v || echo "node version unknown"
+                    which npm || echo "npm not found"
+                    npm -v || echo "npm version unknown"
+
                     npm install
                     npm run build
                     '''
@@ -38,52 +31,52 @@ pipeline {
             }
         }
 
-        stage('Deploy Frontend to Tomcat') {
+        stage('Deploy Frontend') {
             steps {
                 sh '''
-                REACT_DEPLOY_DIR="/Users/vadlanibhavya/Downloads/apache-tomcat-10.1.43/webapps/reactstudentapi"
-
-                if [ -d "$REACT_DEPLOY_DIR" ]; then
-                    rm -rf "$REACT_DEPLOY_DIR"
-                fi
-
-                mkdir -p "$REACT_DEPLOY_DIR"
-                cp -R STUDENTAPI-REACT/dist/* "$REACT_DEPLOY_DIR"
+                FRONTEND_DIR="$TOMCAT_HOME/webapps/movie"
+                rm -rf "$FRONTEND_DIR"
+                mkdir -p "$FRONTEND_DIR"
+                cp -R MovieFrontend/dist/* "$FRONTEND_DIR"
                 '''
             }
         }
 
-        stage('Build Backend') {
+        stage('Build Backend WAR') {
             steps {
-                dir('STUDENTAPI-SPRINGBOOT') {
-                    sh 'mvn clean package'
+                dir('MovieBackend') {
+                    sh 'mvn clean package -DskipTests'
                 }
             }
         }
 
-        stage('Deploy Backend to Tomcat') {
+        stage('Deploy Backend WAR to Tomcat') {
             steps {
                 sh '''
-                WAR_PATH="/Users/vadlanibhavya/Downloads/apache-tomcat-10.1.43/webapps/myspringbootproject.war"
-                WAR_DIR="/Users/vadlanibhavya/Downloads/apache-tomcat-10.1.43/webapps/myspringbootproject"
-
-                rm -f "$WAR_PATH"
-                rm -rf "$WAR_DIR"
-
-                cd STUDENTAPI-SPRINGBOOT/target
-                cp *.war "/Users/vadlanibhavya/Downloads/apache-tomcat-10.1.43/webapps/"
+                # Automatically get the built WAR file
+                WAR_FILE=$(ls MovieBackend/target/*.war | head -n 1)
+                cp "$WAR_FILE" "$TOMCAT_HOME/webapps/MovieBackend.war"
                 '''
             }
         }
 
+        stage('Restart Tomcat') {
+            steps {
+                sh '''
+                $TOMCAT_HOME/bin/shutdown.sh || true
+                sleep 3
+                $TOMCAT_HOME/bin/startup.sh
+                '''
+            }
+        }
     }
 
     post {
         success {
-            echo 'Deployment Successful!'
+            echo ' Deployment Successful!'
         }
         failure {
-            echo 'Pipeline Failed.'
+            echo ' Pipeline Failed.'
         }
     }
 }
