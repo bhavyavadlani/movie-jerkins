@@ -2,8 +2,7 @@ pipeline {
     agent any
 
     environment {
-        PATH = "/opt/homebrew/bin:${env.PATH}"
-        TOMCAT_HOME = "/Users/vadlanibhavya/Downloads/apache-tomcat-10.1.43"
+        PATH = "/usr/local/bin:/opt/homebrew/bin:${env.PATH}"
     }
 
     stages {
@@ -16,6 +15,7 @@ pipeline {
         stage('Check Node, NPM & Maven') {
             steps {
                 sh '''
+                echo "PATH=$PATH"
                 which node || echo "node not found"
                 which npm || echo "npm not found"
                 node -v || echo "node version unknown"
@@ -41,9 +41,12 @@ pipeline {
         stage('Deploy Frontend to Tomcat') {
             steps {
                 sh '''
-                REACT_DEPLOY_DIR="${TOMCAT_HOME}/webapps/reactstudentapi"
+                REACT_DEPLOY_DIR="/Users/vadlanibhavya/Downloads/apache-tomcat-10.1.43/webapps/reactstudentapi"
 
-                rm -rf "$REACT_DEPLOY_DIR"
+                if [ -d "$REACT_DEPLOY_DIR" ]; then
+                    rm -rf "$REACT_DEPLOY_DIR"
+                fi
+
                 mkdir -p "$REACT_DEPLOY_DIR"
                 cp -R STUDENTAPI-REACT/dist/* "$REACT_DEPLOY_DIR"
                 '''
@@ -53,7 +56,7 @@ pipeline {
         stage('Build Backend') {
             steps {
                 dir('STUDENTAPI-SPRINGBOOT') {
-                    sh 'mvn clean package -DskipTests'
+                    sh 'mvn clean package'
                 }
             }
         }
@@ -61,27 +64,18 @@ pipeline {
         stage('Deploy Backend to Tomcat') {
             steps {
                 sh '''
-                WAR_PATH="${TOMCAT_HOME}/webapps/myspringbootproject.war"
-                WAR_DIR="${TOMCAT_HOME}/webapps/myspringbootproject"
+                WAR_PATH="/Users/vadlanibhavya/Downloads/apache-tomcat-10.1.43/webapps/myspringbootproject.war"
+                WAR_DIR="/Users/vadlanibhavya/Downloads/apache-tomcat-10.1.43/webapps/myspringbootproject"
 
                 rm -f "$WAR_PATH"
                 rm -rf "$WAR_DIR"
 
-                cp STUDENTAPI-SPRINGBOOT/target/*.war "$WAR_PATH"
+                cd STUDENTAPI-SPRINGBOOT/target
+                cp *.war "/Users/vadlanibhavya/Downloads/apache-tomcat-10.1.43/webapps/"
                 '''
             }
         }
 
-        // Optional: restart Tomcat if needed
-        stage('Restart Tomcat') {
-            steps {
-                sh '''
-                ${TOMCAT_HOME}/bin/shutdown.sh || true
-                sleep 5
-                ${TOMCAT_HOME}/bin/startup.sh
-                '''
-            }
-        }
     }
 
     post {
